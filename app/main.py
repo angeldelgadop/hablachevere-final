@@ -68,7 +68,9 @@ Format:
     )
     return response.choices[0].message.content.strip()
 
-@app.post("/upload/")
+from fastapi.responses import HTMLResponse
+
+@app.post("/upload/", response_class=HTMLResponse)
 async def upload_audio(file: UploadFile = File(...), language: str = Form("en")):
     try:
         os.makedirs("uploads", exist_ok=True)
@@ -97,14 +99,31 @@ async def upload_audio(file: UploadFile = File(...), language: str = Form("en"))
 
         feedback_text = obtener_feedback_con_gpt(transcription, idioma=language)
 
-        return {
-            "filename": file.filename,
-            "transcription": transcription,
-            "feedback": feedback_text
-        }
+        return f"""
+        <html>
+            <head>
+                <meta charset="utf-8">
+                <title>Resultado</title>
+                <style>
+                    body {{ font-family: Arial, sans-serif; margin: 40px; }}
+                    h1 {{ color: #2a7ae2; }}
+                    pre {{ background-color: #f4f4f4; padding: 20px; border-radius: 8px; }}
+                    a {{ margin-top: 20px; display: inline-block; color: #2a7ae2; text-decoration: none; }}
+                </style>
+            </head>
+            <body>
+                <h1>✅ Análisis completado</h1>
+                <h2>🗣️ Transcripción</h2>
+                <p>{transcription}</p>
+                <h2>📝 Feedback</h2>
+                <pre>{feedback_text}</pre>
+                <a href="/">⬅️ Volver</a>
+            </body>
+        </html>
+        """
 
     except subprocess.CalledProcessError:
-        return {"error": "⚠️ Error converting video. Make sure ffmpeg is installed."}
+        return HTMLResponse(content="⚠️ Error al convertir el archivo. Asegúrate de que ffmpeg está instalado.", status_code=500)
     except Exception as e:
         traceback.print_exc()
-        return {"error": str(e)}
+        return HTMLResponse(content=f"⚠️ Error: {str(e)}", status_code=500)
