@@ -23,54 +23,51 @@ async def index():
 def obtener_feedback_con_gpt(transcripcion, idioma="en"):
     if idioma == "es":
         prompt = f"""
-Eres un profesor de español, eres latino, de Venezuela, que revisa textos hablados de estudiantes extranjeros (nivel A2-B1).
+Eres un profesor de español (latino, venezolano) que da retroalimentación solo si es necesaria.
 
-Analiza el siguiente texto transcrito del habla de un estudiante. Si hay errores gramaticales, de vocabulario o de expresión, explícalos de forma clara y sencilla, y da una versión corregida al final.
+Tienes que:
+- Detectar errores gramaticales o de vocabulario real, nivel A2-B1
+- Ignorar pequeños detalles si no afectan el sentido
+- No inventar errores
+- Si todo está correcto, responde: "✅ Todo está correcto. ¡Buen trabajo!"
+- Si hay errores, usa este formato:
 
-Si el texto está bien, simplemente di que está correcto y no inventes errores.
-si el texto está bien, no des ninguna versión corregida sugerida
-no busques errores que no hay, 
-
-Texto del estudiante:
-"{transcripcion}"
-
-Formato:
 1. 🔍 Error: ...
    💡 Explicación: ...
    ✅ Corrección: ...
 ...
 ✍️ Versión corregida sugerida: ...
+
+Texto del estudiante:
+"""{transcripcion}"""
 """
     else:
         prompt = f"""
-You are a Spanish teacher, you are Latino, from Venezuela, who reviews spoken texts of foreign students (level A2-B1).
-Analyze the following spoken Spanish text (transcribed). If there are real grammar or expression mistakes, explain them clearly in English and give a corrected version.
+You are a Latin American Spanish teacher from Venezuela. Your job is to give feedback to a Spanish student (level A2-B1).
 
-If the sentence is already correct, say so and do not invent problems.
-If the sentence is already correct, dont give any suggested corrected version
-do not invent mistakes that are not there
+Give feedback ONLY if there are actual mistakes in grammar or vocabulary.
+- DO NOT invent problems or rephrase things that are already correct.
+- If the text is correct, just say: "✅ Everything looks correct. Great job!"
+- If there are real mistakes, give friendly, clear feedback like this:
 
-Student's text:
-"{transcripcion}"
-
-Format:
 1. 🔍 Error: ...
    💡 Explanation: ...
    ✅ Correction: ...
 ...
 ✍️ Suggested corrected version: ...
+
+Student's text:
+"""{transcripcion}"""
 """
 
     response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
         messages=[{"role": "user", "content": prompt}],
-        temperature=0.5
+        temperature=0.2
     )
     return response.choices[0].message.content.strip()
 
-from fastapi.responses import HTMLResponse
-
-@app.post("/upload/", response_class=HTMLResponse)
+@app.post("/upload/")
 async def upload_audio(file: UploadFile = File(...), language: str = Form("en")):
     try:
         os.makedirs("uploads", exist_ok=True)
@@ -99,31 +96,14 @@ async def upload_audio(file: UploadFile = File(...), language: str = Form("en"))
 
         feedback_text = obtener_feedback_con_gpt(transcription, idioma=language)
 
-        return f"""
-        <html>
-            <head>
-                <meta charset="utf-8">
-                <title>Resultado</title>
-                <style>
-                    body {{ font-family: Arial, sans-serif; margin: 40px; }}
-                    h1 {{ color: #2a7ae2; }}
-                    pre {{ background-color: #f4f4f4; padding: 20px; border-radius: 8px; }}
-                    a {{ margin-top: 20px; display: inline-block; color: #2a7ae2; text-decoration: none; }}
-                </style>
-            </head>
-            <body>
-                <h1>✅ Análisis completado</h1>
-                <h2>🗣️ Transcripción</h2>
-                <p>{transcription}</p>
-                <h2>📝 Feedback</h2>
-                <pre>{feedback_text}</pre>
-                <a href="/">⬅️ Volver</a>
-            </body>
-        </html>
-        """
+        return {
+            "filename": file.filename,
+            "transcription": transcription,
+            "feedback": feedback_text
+        }
 
     except subprocess.CalledProcessError:
-        return HTMLResponse(content="⚠️ Error al convertir el archivo. Asegúrate de que ffmpeg está instalado.", status_code=500)
+        return {"error": "⚠️ Error converting video. Make sure ffmpeg is installed."}
     except Exception as e:
         traceback.print_exc()
-        return HTMLResponse(content=f"⚠️ Error: {str(e)}", status_code=500)
+        return {"error": str(e)}
