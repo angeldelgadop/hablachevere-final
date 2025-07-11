@@ -5,3 +5,4 @@ openai
 speechrecognition
 pydub
 ffmpeg-python
+python-multipart
