@@ -1,7 +1,7 @@
 fastapi
 uvicorn
 python-dotenv
-openai
+openai==0.28
 speechrecognition
 pydub
 ffmpeg-python
