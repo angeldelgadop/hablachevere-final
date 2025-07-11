@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Hablachevere</title>
+</head>
+<body>
+    <h1>Sube tu audio</h1>
+    <form action="/upload/" method="post" enctype="multipart/form-data">
+        <label for="language">Idioma del feedback:</label>
+        <select name="language" id="language">
+            <option value="es">Español</option>
+            <option value="en" selected>Inglés</option>
+        </select><br><br>
+        <input type="file" name="file" accept="audio/*"><br><br>
+        <input type="submit" value="Subir">
+    </form>
+</body>
+</html>
